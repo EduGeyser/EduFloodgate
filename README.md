@@ -18,9 +18,9 @@ Requires [EduGeyser](https://github.com/SendableMetatype/EduGeyser).
 
 ## Documentation
 
-- **[Setup Guide](https://github.com/SendableMetatype/EduGeyser/blob/full/SETUP-GUIDE.md)** - How to install and configure EduGeyser + EduFloodgate
+- **[Setup Guide](https://codeberg.org/SendableMetatype/EduGeyser-Docs/src/branch/master/SETUP-GUIDE.md)** - How to install and configure EduGeyser + EduFloodgate
 
-For technical details, see the **[Master Documentation](https://github.com/SendableMetatype/EduGeyser/blob/full/edugeyser-master-documentation.md)**.
+For technical details, see the **[Master Documentation](https://codeberg.org/SendableMetatype/EduGeyser-Docs/src/branch/master/edugeyser-master-documentation.md)**.
 
 ---
 
