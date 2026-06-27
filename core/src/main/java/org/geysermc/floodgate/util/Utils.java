@@ -35,6 +35,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.annotation.Annotation;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Properties;
@@ -117,6 +119,26 @@ public class Utils {
         long upper = ((msb >>> 16) << 12) | (msb & 0xFFF);
         long lower = (lsb << 2) >>> 60;
         return new UUID(EDUCATION_UUID_MSB, (upper << 4) | lower);
+    }
+
+    /**
+     * Legacy UUID scheme. Derives an education player's Java UUID from the SHA-256 of
+     * {@code tenantId + ":" + username}, taking the first 8 hash bytes as the LSB and the same
+     * {@link #EDUCATION_UUID_MSB} sentinel as the MSB. Preserved only for deployments with existing
+     * player data keyed by this scheme; selected via the configured education UUID scheme.
+     */
+    public static UUID getLegacyEducationUuid(String tenantId, String username) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest((tenantId + ":" + username).getBytes(StandardCharsets.UTF_8));
+            long lsb = 0;
+            for (int i = 0; i < 8; i++) {
+                lsb = (lsb << 8) | (hash[i] & 0xFF);
+            }
+            return new UUID(EDUCATION_UUID_MSB, lsb);
+        } catch (NoSuchAlgorithmException e) {
+            throw new AssertionError("SHA-256 not available", e);
+        }
     }
 
     public static boolean isEducationId(UUID uuid) {

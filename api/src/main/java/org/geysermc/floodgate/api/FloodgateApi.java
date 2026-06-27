@@ -92,6 +92,17 @@ public interface FloodgateApi {
     UUID createEducationPlayerId(String oid);
 
     /**
+     * Create a valid Java player uuid for an Education Edition player using the legacy scheme,
+     * derived from {@code SHA-256(tenantId:username)}. Only for deployments configured with the
+     * legacy education UUID scheme; otherwise use {@link #createEducationPlayerId(String)}.
+     *
+     * @param tenantId the Entra tenant ID of the player's organization
+     * @param username the player's Bedrock username
+     * @return the created uuid based on the tenant ID and username
+     */
+    UUID createLegacyEducationPlayerId(String tenantId, String username);
+
+    /**
      * Checks whether the uuid matches the format used for Bedrock Floodgate players
      * (see {@link #createJavaPlayerId(long)}) or the format used for Education Edition
      * players (derived from their Entra OID). This method cannot validate a linked

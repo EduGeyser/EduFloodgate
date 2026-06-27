@@ -38,6 +38,7 @@ import org.geysermc.floodgate.api.handshake.HandshakeData;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
 import org.geysermc.floodgate.api.player.PropertyKey;
 import org.geysermc.floodgate.api.player.PropertyKey.Result;
+import org.geysermc.floodgate.api.util.EducationUuidScheme;
 import org.geysermc.floodgate.util.BedrockData;
 import org.geysermc.floodgate.util.DeviceOs;
 import org.geysermc.floodgate.util.InputMode;
@@ -75,12 +76,14 @@ public final class FloodgatePlayerImpl implements FloodgatePlayer {
     @Getter(AccessLevel.PRIVATE)
     private Map<String, PropertyKey> stringToPropertyKey;
 
-    static FloodgatePlayerImpl from(BedrockData data, HandshakeData handshakeData) {
+    static FloodgatePlayerImpl from(BedrockData data, HandshakeData handshakeData, EducationUuidScheme educationUuidScheme) {
         FloodgateApi api = FloodgateApi.getInstance();
 
         UUID javaUniqueId;
         if (data.isEducation()) {
-            javaUniqueId = Utils.getEducationUuid(data.getXuid());
+            javaUniqueId = educationUuidScheme.legacy()
+                    ? Utils.getLegacyEducationUuid(data.getTenantId(), data.getUsername())
+                    : Utils.getEducationUuid(data.getXuid());
         } else {
             javaUniqueId = Utils.getJavaUuid(data.getXuid());
         }

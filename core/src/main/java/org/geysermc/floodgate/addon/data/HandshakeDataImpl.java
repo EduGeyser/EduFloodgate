@@ -30,6 +30,7 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 import org.geysermc.floodgate.api.handshake.HandshakeData;
+import org.geysermc.floodgate.api.util.EducationUuidScheme;
 import org.geysermc.floodgate.config.FloodgateConfig;
 import org.geysermc.floodgate.util.BedrockData;
 import org.geysermc.floodgate.util.LinkedPlayer;
@@ -54,7 +55,8 @@ public class HandshakeDataImpl implements HandshakeData {
             BedrockData bedrockData,
             FloodgateConfig config,
             LinkedPlayer linkedPlayer,
-            String hostname) {
+            String hostname,
+            EducationUuidScheme educationUuidScheme) {
 
         this.channel = channel;
         this.floodgatePlayer = floodgatePlayer;
@@ -77,7 +79,9 @@ public class HandshakeDataImpl implements HandshakeData {
                 String baseName = prefix + bedrockData.getUsername().substring(0, nameLength);
                 javaUsername = Utils.findAvailableEduUsername(baseName);
 
-                javaUniqueId = Utils.getEducationUuid(bedrockData.getXuid());
+                javaUniqueId = educationUuidScheme.legacy()
+                        ? Utils.getLegacyEducationUuid(bedrockData.getTenantId(), bedrockData.getUsername())
+                        : Utils.getEducationUuid(bedrockData.getXuid());
             } else {
                 String prefix = config.getUsernamePrefix();
                 int usernameLength = Math.min(bedrockData.getUsername().length(), 16 - prefix.length());

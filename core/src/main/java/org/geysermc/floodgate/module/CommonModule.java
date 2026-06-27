@@ -53,6 +53,7 @@ import org.geysermc.floodgate.api.link.PlayerLink;
 import org.geysermc.floodgate.api.logger.FloodgateLogger;
 import org.geysermc.floodgate.api.packet.PacketHandlers;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
+import org.geysermc.floodgate.api.util.EducationUuidScheme;
 import org.geysermc.floodgate.config.ConfigLoader;
 import org.geysermc.floodgate.config.FloodgateConfig;
 import org.geysermc.floodgate.crypto.AesCipher;
@@ -70,6 +71,7 @@ import org.geysermc.floodgate.player.FloodgateHandshakeHandler;
 import org.geysermc.floodgate.pluginmessage.PluginMessageManager;
 import org.geysermc.floodgate.skin.SkinUploadManager;
 import org.geysermc.floodgate.util.Constants;
+import org.geysermc.floodgate.util.EducationUuidSchemeProvider;
 import org.geysermc.floodgate.util.HttpClient;
 import org.geysermc.floodgate.util.LanguageManager;
 
@@ -88,6 +90,12 @@ public class CommonModule extends AbstractModule {
     protected void configure() {
         bind(EventBus.class).toInstance(eventBus);
         bind(FloodgateEventBus.class).to(EventBus.class);
+
+        // Eager so a misconfigured education UUID scheme fails Floodgate at startup,
+        // not on the first education handshake.
+        bind(EducationUuidScheme.class)
+                .toProvider(EducationUuidSchemeProvider.class)
+                .asEagerSingleton();
         // register every class that has the Listener annotation
         bindListener(new ListenerAnnotationMatcher(), new TypeListener() {
             @Override
@@ -175,10 +183,11 @@ public class CommonModule extends AbstractModule {
             SkinUploadManager skinUploadManager,
             @Named("playerAttribute") AttributeKey<FloodgatePlayer> playerAttribute,
             FloodgateLogger logger,
-            LanguageManager languageManager) {
+            LanguageManager languageManager,
+            EducationUuidScheme educationUuidScheme) {
 
         return new FloodgateHandshakeHandler(handshakeHandlers, api, cipher, config,
-                skinUploadManager, playerAttribute, logger, languageManager);
+                skinUploadManager, playerAttribute, logger, languageManager, educationUuidScheme);
     }
 
     @Provides
