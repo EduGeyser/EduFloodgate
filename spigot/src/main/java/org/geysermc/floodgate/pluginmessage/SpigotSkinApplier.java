@@ -33,6 +33,7 @@ import com.mojang.authlib.properties.PropertyMap;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.checkerframework.checker.nullness.qual.NonNull;
+import org.geysermc.floodgate.api.FloodgateApi;
 import org.geysermc.floodgate.api.event.skin.SkinApplyEvent;
 import org.geysermc.floodgate.api.event.skin.SkinApplyEvent.SkinData;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
@@ -47,6 +48,7 @@ import org.geysermc.floodgate.util.SpigotVersionSpecificMethods;
 public final class SpigotSkinApplier implements SkinApplier {
     @Inject private SpigotVersionSpecificMethods versionSpecificMethods;
     @Inject private EventBus eventBus;
+    @Inject private FloodgateApi api;
 
     @Override
     public void applySkin(@NonNull FloodgatePlayer floodgatePlayer, @NonNull SkinData skinData, boolean internal) {
@@ -95,7 +97,8 @@ public final class SpigotSkinApplier implements SkinApplier {
 
         versionSpecificMethods.maybeSchedule(() -> {
             for (Player p : Bukkit.getOnlinePlayers()) {
-                if (!p.equals(player) && p.canSee(player)) {
+                if (!p.equals(player) && p.canSee(player)
+                        && !api.isFloodgatePlayer(p.getUniqueId())) {
                     versionSpecificMethods.hideAndShowPlayer(p, player);
                 }
             }

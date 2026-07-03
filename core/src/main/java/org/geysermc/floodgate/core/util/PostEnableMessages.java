@@ -63,6 +63,7 @@ public final class PostEnableMessages {
     @Inject
     private void init() {
         registerPrefixMessages();
+        registerEducationPrefixMessages();
     }
 
     private void registerPrefixMessages() {
@@ -93,6 +94,38 @@ public final class PostEnableMessages {
                     "The prefix you entered in your Floodgate config ({}) is long! ({} characters)",
                     "A prefix is there to prevent username conflicts. However, a long prefix makes the chance of username conflicts higher.",
                     "We strongly recommend using . as the prefix, but other alternatives that will not conflict include: +, - and *"
+            }, prefix, prefix.length());
+        }
+    }
+
+    private void registerEducationPrefixMessages() {
+        String prefix = config.getRawEducationPrefix();
+
+        if (prefix.isEmpty()) {
+            add(new String[]{
+                    "You specified an empty prefix in your Floodgate config for Education players!",
+                    "Should a Java player join and an Education player join with the same username, unwanted results and conflicts will happen!",
+                    "We strongly recommend using + as the prefix, but other alternatives that will not conflict include: ., - and *"
+            });
+        } else if (!Utils.isUniquePrefix(prefix)) {
+            add(new String[]{
+                    "The education prefix you entered in your Floodgate config ({}) could lead to username conflicts!",
+                    "Should a Java player join with the username {}Notch, and an Education player join as Notch (who will be given the name {}Notch), unwanted results will happen!",
+                    "We strongly recommend using + as the prefix, but other alternatives that will not conflict include: ., - and *"
+            }, prefix, prefix, prefix, prefix);
+        }
+
+        if (prefix.length() >= 16) {
+            add(new String[]{
+                    "The education prefix you entered in your Floodgate config ({}) is longer than a Java username can be!",
+                    "Because of this, we reset the prefix to the default education prefix (+)"
+            }, prefix);
+        } else if (prefix.length() > 2) {
+            // we only have to warn them if we haven't replaced the prefix
+            add(new String[]{
+                    "The education prefix you entered in your Floodgate config ({}) is long! ({} characters)",
+                    "A prefix is there to prevent username conflicts. However, a long prefix makes the chance of username conflicts higher.",
+                    "We strongly recommend using + as the prefix, but other alternatives that will not conflict include: ., - and *"
             }, prefix, prefix.length());
         }
     }

@@ -8,6 +8,11 @@ key-file-name: key.pem
 # It is recommended to use a prefix that does not contain alphanumerical to avoid the possibility of duplicate usernames.
 username-prefix: "."
 
+# The prefix used for Education Edition players. When two online edu players would
+# end up with the same Java username (common within a single M365 tenant), a numeric
+# suffix is appended automatically, e.g. "+John" becomes "+John_1".
+education-prefix: "+"
+
 # Should spaces be replaced with '_' in bedrock usernames?
 replace-spaces: true
 
@@ -63,4 +68,4 @@ metrics:
   uuid: ${metrics.uuid}
 
 # Do not change this
-config-version: 3
+config-version: 4

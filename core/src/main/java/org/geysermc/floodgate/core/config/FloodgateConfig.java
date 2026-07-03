@@ -41,6 +41,7 @@ import org.geysermc.configutils.loader.callback.GenericPostInitializeCallback;
 public class FloodgateConfig implements GenericPostInitializeCallback<ConfigLoader> {
     private String keyFileName;
     private String usernamePrefix = "";
+    private String educationPrefix = "+";
     private boolean replaceSpaces;
 
     private String defaultLocale;
@@ -55,6 +56,7 @@ public class FloodgateConfig implements GenericPostInitializeCallback<ConfigLoad
 
     private Key key;
     private String rawUsernamePrefix;
+    private String rawEducationPrefix;
 
     public boolean isProxy() {
         return this instanceof ProxyFloodgateConfig;
@@ -78,10 +80,16 @@ public class FloodgateConfig implements GenericPostInitializeCallback<ConfigLoad
         }
 
         rawUsernamePrefix = usernamePrefix;
+        rawEducationPrefix = educationPrefix;
 
         // Java usernames can't be longer than 16 chars
         if (usernamePrefix.length() >= 16) {
             usernamePrefix = ".";
+        }
+
+        // Education prefix must leave room for at least 1 char of name + "_N" suffix headroom
+        if (educationPrefix.length() >= 16) {
+            educationPrefix = "+";
         }
 
         return CallbackResult.ok();

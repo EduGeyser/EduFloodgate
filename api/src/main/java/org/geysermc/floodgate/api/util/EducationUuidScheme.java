@@ -23,21 +23,26 @@
  * @link https://github.com/GeyserMC/Floodgate
  */
 
-object Versions {
-    const val geyserVersion = "2.9.4-SNAPSHOT"
-    const val cumulusVersion = "1.1.2"
-    const val eventsVersion = "1.1-SNAPSHOT"
-    const val configUtilsVersion = "1.0-SNAPSHOT"
-    const val spigotVersion = "1.19.4-R0.1-SNAPSHOT"
-    const val fastutilVersion = "8.5.3"
-    const val guiceVersion = "6.0.0"
-    const val nettyVersion = "4.1.49.Final"
-    const val snakeyamlVersion = "1.28"
-    const val cloudVersion = "2.0.0-beta.16" // for cloud-minecraft
-    const val cloudCore = "2.0.0"
-    const val bstatsVersion = "3.0.2"
+package org.geysermc.floodgate.api.util;
 
-    const val javaWebsocketVersion = "1.6.0"
+/**
+ * Selects how an education player's Java UUID is derived. This is the player's identity, so the
+ * chosen scheme must be identical on EduGeyser and every EduFloodgate instance on a network. It is
+ * loaded once at startup and passed explicitly to the UUID derivation sites, rather than read from
+ * ambient global state, so the dependency is visible and cannot be silently bypassed.
+ */
+public enum EducationUuidScheme {
+    /**
+     * Derive from the MESS-verified Entra OID. The current, recommended scheme.
+     */
+    MODERN,
+    /**
+     * Derive from {@code SHA-256(tenantId:username)}. Preserved only for deployments with
+     * existing player data keyed by this scheme.
+     */
+    LEGACY;
 
-    const val checkerQual = "3.19.0"
+    public boolean legacy() {
+        return this == LEGACY;
+    }
 }

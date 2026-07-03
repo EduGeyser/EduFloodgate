@@ -48,6 +48,7 @@ import org.geysermc.floodgate.api.handshake.HandshakeData;
 import org.geysermc.floodgate.api.logger.FloodgateLogger;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
 import org.geysermc.floodgate.api.player.PropertyKey;
+import org.geysermc.floodgate.api.util.EducationUuidScheme;
 import org.geysermc.floodgate.core.config.FloodgateConfig;
 import org.geysermc.floodgate.crypto.FloodgateCipher;
 import org.geysermc.floodgate.core.skin.SkinUploadManager;
@@ -67,6 +68,7 @@ public final class FloodgateHandshakeHandler {
     private final AttributeKey<FloodgatePlayer> playerAttribute;
     private final FloodgateLogger logger;
     private final LanguageManager languageManager;
+    private final EducationUuidScheme educationUuidScheme;
 
     public FloodgateHandshakeHandler(
             HandshakeHandlersImpl handshakeHandlers,
@@ -76,7 +78,8 @@ public final class FloodgateHandshakeHandler {
             SkinUploadManager skinUploadManager,
             AttributeKey<FloodgatePlayer> playerAttribute,
             FloodgateLogger logger,
-            LanguageManager languageManager) {
+            LanguageManager languageManager,
+            EducationUuidScheme educationUuidScheme) {
 
         this.handshakeHandlers = handshakeHandlers;
         this.api = api;
@@ -86,6 +89,7 @@ public final class FloodgateHandshakeHandler {
         this.playerAttribute = playerAttribute;
         this.logger = logger;
         this.languageManager = languageManager;
+        this.educationUuidScheme = educationUuidScheme;
     }
 
     /**
@@ -213,7 +217,7 @@ public final class FloodgateHandshakeHandler {
         try {
             HandshakeData handshakeData = new HandshakeDataImpl(
                     channel, true, bedrockData.clone(), config,
-                    linkedPlayer != null ? linkedPlayer.clone() : null, hostname);
+                    linkedPlayer != null ? linkedPlayer.clone() : null, hostname, educationUuidScheme);
 
             if (config.getPlayerLink().isRequireLink() && linkedPlayer == null) {
                 String reason = languageManager.getString(
@@ -231,7 +235,7 @@ public final class FloodgateHandshakeHandler {
                         bedrockData.getVerifyCode());
             }
 
-            FloodgatePlayer player = FloodgatePlayerImpl.from(bedrockData, handshakeData);
+            FloodgatePlayer player = FloodgatePlayerImpl.from(bedrockData, handshakeData, educationUuidScheme);
 
             api.addPlayer(player);
 
@@ -255,14 +259,15 @@ public final class FloodgateHandshakeHandler {
             String hostname) {
 
         HandshakeData handshakeData = new HandshakeDataImpl(channel, bedrockData != null,
-                bedrockData, config, null, hostname);
+                bedrockData, config, null, hostname, educationUuidScheme);
         handshakeHandlers.callHandshakeHandlers(handshakeData);
 
         return new HandshakeResult(resultType, handshakeData, bedrockData, null);
     }
 
     private CompletableFuture<Pair<BedrockData, LinkedPlayer>> fetchLinkedPlayer(BedrockData data) {
-        if (!api.getPlayerLink().isEnabled()) {
+        // Education players have no Xbox account, skip linking
+        if (!api.getPlayerLink().isEnabled() || data.isEducation()) {
             return CompletableFuture.completedFuture(new ObjectObjectImmutablePair<>(data, null));
         }
         return api.getPlayerLink().getLinkedPlayer(Utils.getJavaUuid(data.getXuid()))

@@ -30,6 +30,7 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 import org.geysermc.floodgate.api.handshake.HandshakeData;
+import org.geysermc.floodgate.api.util.EducationUuidScheme;
 import org.geysermc.floodgate.core.config.FloodgateConfig;
 import org.geysermc.floodgate.util.BedrockData;
 import org.geysermc.floodgate.util.LinkedPlayer;
@@ -54,7 +55,8 @@ public class HandshakeDataImpl implements HandshakeData {
             BedrockData bedrockData,
             FloodgateConfig config,
             LinkedPlayer linkedPlayer,
-            String hostname) {
+            String hostname,
+            EducationUuidScheme educationUuidScheme) {
 
         this.channel = channel;
         this.floodgatePlayer = floodgatePlayer;
@@ -66,14 +68,30 @@ public class HandshakeDataImpl implements HandshakeData {
         UUID javaUniqueId = null;
 
         if (bedrockData != null) {
-            String prefix = config.getUsernamePrefix();
-            int usernameLength = Math.min(bedrockData.getUsername().length(), 16 - prefix.length());
-            javaUsername = prefix + bedrockData.getUsername().substring(0, usernameLength);
+            if (bedrockData.isEducation()) {
+                // Education players share Bedrock usernames within a tenant (the Entra
+                // default "FirstnameLastInitial" format is not unique per-user). Build
+                // the prefixed name, then resolve any collision with other online
+                // Floodgate players by appending a "_N" suffix.
+                String prefix = config.getEducationPrefix();
+                int maxNameLength = 16 - prefix.length();
+                int nameLength = Math.min(bedrockData.getUsername().length(), maxNameLength);
+                String baseName = prefix + bedrockData.getUsername().substring(0, nameLength);
+                javaUsername = Utils.findAvailableEduUsername(baseName);
+
+                javaUniqueId = educationUuidScheme.legacy()
+                        ? Utils.getLegacyEducationUuid(bedrockData.getTenantId(), bedrockData.getUsername())
+                        : Utils.getEducationUuid(bedrockData.getXuid());
+            } else {
+                String prefix = config.getUsernamePrefix();
+                int usernameLength = Math.min(bedrockData.getUsername().length(), 16 - prefix.length());
+                javaUsername = prefix + bedrockData.getUsername().substring(0, usernameLength);
+
+                javaUniqueId = Utils.getJavaUuid(bedrockData.getXuid());
+            }
             if (config.isReplaceSpaces()) {
                 javaUsername = javaUsername.replace(" ", "_");
             }
-
-            javaUniqueId = Utils.getJavaUuid(bedrockData.getXuid());
             this.ip = bedrockData.getIp();
         }
 
