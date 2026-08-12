@@ -26,6 +26,7 @@
 package org.geysermc.floodgate.command;
 
 import static org.geysermc.floodgate.command.CommonCommandMessage.CHECK_CONSOLE;
+import static org.incendo.cloud.parser.standard.StringParser.stringParser;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -46,6 +47,9 @@ import org.geysermc.floodgate.player.audience.PlayerAudienceArgument;
 import org.geysermc.floodgate.player.audience.ProfileAudience;
 import org.geysermc.floodgate.util.Constants;
 import org.geysermc.floodgate.util.HttpClient;
+import org.geysermc.floodgate.util.PendingWhitelistManager;
+import org.geysermc.floodgate.util.Utils;
+import org.geysermc.floodgate.util.PendingWhitelistManager.Population;
 import org.incendo.cloud.Command;
 import org.incendo.cloud.CommandManager;
 import org.incendo.cloud.context.CommandContext;
@@ -55,21 +59,24 @@ public class WhitelistCommand implements FloodgateCommand {
     @Inject private FloodgateConfig config;
     @Inject private HttpClient httpClient;
     @Inject private FloodgateLogger logger;
+    @Inject private PendingWhitelistManager pendingWhitelist;
 
     @Override
     public Command<UserAudience> buildCommand(CommandManager<UserAudience> commandManager) {
         Command.Builder<UserAudience> builder = commandManager.commandBuilder("fwhitelist",
-                Description.of("Easy way to whitelist Bedrock players"))
+                Description.of("Easy way to whitelist Bedrock and Education players"))
                 .permission(Permission.COMMAND_WHITELIST.get());
 
         commandManager.command(builder
                 .literal("add", "a")
                 .argument(PlayerAudienceArgument.ofAnyIdentifierBedrock("player"))
+                .optional("type", stringParser())
                 .handler(context -> performCommand(context, true)));
 
         return builder
                 .literal("remove", "r")
                 .argument(PlayerAudienceArgument.ofAnyIdentifierBedrock("player"))
+                .optional("type", stringParser())
                 .handler(context -> performCommand(context, false))
                 .build();
     }
@@ -80,6 +87,18 @@ public class WhitelistCommand implements FloodgateCommand {
         UUID uuid = profile.uuid();
         String name = profile.username();
 
+        Population population = Population.BOTH;
+        if (context.contains("type")) {
+            String type = context.get("type");
+            population = Population.fromInput(type);
+            if (population == null) {
+                sender.sendMessage(
+                        "Unknown player type '" + type + "', expected 'bedrock' or 'edu'."
+                        + " If the name contains spaces, wrap it in quotes.");
+                return;
+            }
+        }
+
         if (name == null && uuid == null) {
             sender.sendMessage(Message.UNEXPECTED_ERROR);
             return;
@@ -88,6 +107,18 @@ public class WhitelistCommand implements FloodgateCommand {
         if (uuid != null) {
             if (!FloodgateApi.getInstance().isFloodgateId(uuid)) {
                 sender.sendMessage(Message.INVALID_USERNAME);
+                return;
+            }
+
+            // a UUID already identifies one account, but an explicit population tag that
+            // contradicts the population encoded in the UUID signals operator confusion
+            boolean educationId = Utils.isEducationId(uuid);
+            if (population == Population.EDU && !educationId) {
+                sender.sendMessage("'" + uuid + "' is a Bedrock UUID, not an education one.");
+                return;
+            }
+            if (population == Population.BEDROCK && educationId) {
+                sender.sendMessage("'" + uuid + "' is an education UUID, not a Bedrock one.");
                 return;
             }
 
@@ -110,26 +141,61 @@ public class WhitelistCommand implements FloodgateCommand {
             return;
         }
 
-        if (name.startsWith(config.getUsernamePrefix())) {
-            name = name.substring(config.getUsernamePrefix().length());
+        if (name.isEmpty()) {
+            sender.sendMessage(Message.INVALID_USERNAME);
+            return;
         }
 
-        if (name.isEmpty() || name.length() > 16) {
-            sender.sendMessage(Message.INVALID_USERNAME);
+        // the pending entry covers everyone the xuid lookup can't resolve: education players
+        // have no publicly resolvable identity, and it also acts as a fallback for Bedrock
+        // players when the xuid api is down. The entry is consumed on their next join.
+        boolean pendingChanged;
+        if (add) {
+            pendingChanged = pendingWhitelist.add(name, population, sender.username());
+            sender.sendMessage(pendingChanged
+                    ? "Added '" + name + "' to the pending whitelist,"
+                            + " they will be whitelisted when they next join."
+                    : "Updated the pending whitelist entry for '" + name + "'.");
+        } else {
+            pendingChanged = pendingWhitelist.remove(name);
+            if (pendingChanged) {
+                sender.sendMessage("Removed '" + name + "' from the pending whitelist.");
+            }
+        }
+
+        if (population == Population.EDU) {
+            // education names can't be resolved through the Xbox api, and a coincidental
+            // gamertag match would whitelist a stranger
+            if (!add && !pendingChanged) {
+                sender.sendMessage("There is no pending whitelist entry for '" + name + "'.");
+            }
+            return;
+        }
+
+        String gamertag = name;
+        if (gamertag.startsWith(config.getUsernamePrefix())) {
+            gamertag = gamertag.substring(config.getUsernamePrefix().length());
+        }
+
+        if (gamertag.isEmpty() || gamertag.length() > 16) {
+            // can't be a gamertag, only the pending entry applies
+            if (!add && !pendingChanged) {
+                sender.sendMessage("There is no pending whitelist entry for '" + name + "'.");
+            }
             return;
         }
 
         // todo let it use translations
 
-        String tempName = name;
+        String tempName = gamertag;
         if (config.isReplaceSpaces()) {
             tempName = tempName.replace(' ', '_');
         }
         final String correctName = config.getUsernamePrefix() + tempName;
-        final String strippedName = name;
+        final String strippedName = gamertag;
 
         // We need to get the UUID of the player if it's not manually specified
-        httpClient.asyncGet(Constants.GET_XUID_URL + name)
+        httpClient.asyncGet(Constants.GET_XUID_URL + gamertag)
                 .whenComplete((result, error) -> {
                     if (error != null) {
                         sender.sendMessage(Message.API_UNAVAILABLE);

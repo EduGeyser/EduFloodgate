@@ -74,6 +74,7 @@ import org.geysermc.floodgate.util.Constants;
 import org.geysermc.floodgate.util.EducationUuidSchemeProvider;
 import org.geysermc.floodgate.util.HttpClient;
 import org.geysermc.floodgate.util.LanguageManager;
+import org.geysermc.floodgate.util.PendingWhitelistManager;
 
 @RequiredArgsConstructor
 public class CommonModule extends AbstractModule {
@@ -184,10 +185,12 @@ public class CommonModule extends AbstractModule {
             @Named("playerAttribute") AttributeKey<FloodgatePlayer> playerAttribute,
             FloodgateLogger logger,
             LanguageManager languageManager,
-            EducationUuidScheme educationUuidScheme) {
+            EducationUuidScheme educationUuidScheme,
+            PendingWhitelistManager pendingWhitelist) {
 
         return new FloodgateHandshakeHandler(handshakeHandlers, api, cipher, config,
-                skinUploadManager, playerAttribute, logger, languageManager, educationUuidScheme);
+                skinUploadManager, playerAttribute, logger, languageManager, educationUuidScheme,
+                pendingWhitelist);
     }
 
     @Provides
