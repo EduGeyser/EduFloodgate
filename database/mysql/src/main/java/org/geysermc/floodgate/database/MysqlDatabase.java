@@ -34,6 +34,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -83,9 +84,21 @@ public class MysqlDatabase extends CommonPlayerLink {
                   "`linkCode` VARCHAR(16) NOT NULL , " +
                   "`bedrockUsername` VARCHAR(16) NOT NULL ," +
                   "`requestTime` BIGINT NOT NULL , " +
+                  "`bedrockId` BINARY(16) NULL , " +
                   " PRIMARY KEY (`javaUsername`), INDEX(`requestTime`)" +
                   " ) ENGINE = InnoDB;"
           );
+        }
+        // tables from before the bedrockId column existed aren't touched by the create
+        // above, so add the column separately. 1060 = duplicate column, the normal case
+        try (Statement statement = connection.createStatement()) {
+          statement.executeUpdate(
+              "ALTER TABLE `LinkedPlayersRequest` ADD COLUMN `bedrockId` BINARY(16) NULL;"
+          );
+        } catch (SQLException exception) {
+          if (exception.getErrorCode() != 1060) {
+            throw exception;
+          }
         }
       }
       getLogger().info("Connected to MySQL-like database.");
@@ -205,10 +218,21 @@ public class MysqlDatabase extends CommonPlayerLink {
       @NonNull String javaUsername,
       @NonNull String bedrockUsername
   ) {
+    return createLinkRequest(javaId, javaUsername, bedrockUsername, null);
+  }
+
+  @Override
+  @NonNull
+  public CompletableFuture<String> createLinkRequest(
+      @NonNull UUID javaId,
+      @NonNull String javaUsername,
+      @NonNull String bedrockUsername,
+      UUID bedrockId
+  ) {
     return CompletableFuture.supplyAsync(() -> {
       String linkCode = createCode();
 
-      createLinkRequest0(javaUsername, javaId, linkCode, bedrockUsername);
+      createLinkRequest0(javaUsername, javaId, linkCode, bedrockUsername, bedrockId);
 
       return linkCode;
     }, getExecutorService());
@@ -218,22 +242,32 @@ public class MysqlDatabase extends CommonPlayerLink {
       String javaUsername,
       UUID javaId,
       String linkCode,
-      String bedrockUsername
+      String bedrockUsername,
+      UUID bedrockId
   ) {
     try (Connection connection = dataSource.getConnection()) {
       try (PreparedStatement query = connection.prepareStatement(
-          "INSERT INTO `LinkedPlayersRequest` VALUES (?, ?, ?, ?, ?) " +
+          "INSERT INTO `LinkedPlayersRequest` " +
+              "(`javaUsername`, `javaUniqueId`, `linkCode`, `bedrockUsername`, " +
+              "`requestTime`, `bedrockId`) " +
+              "VALUES (?, ?, ?, ?, ?, ?) " +
               "ON DUPLICATE KEY UPDATE " +
               "`javaUniqueId`=VALUES(`javaUniqueId`), " +
               "`linkCode`=VALUES(`linkCode`), " +
               "`bedrockUsername`=VALUES(`bedrockUsername`), " +
-              "`requestTime`=VALUES(`requestTime`);"
+              "`requestTime`=VALUES(`requestTime`), " +
+              "`bedrockId`=VALUES(`bedrockId`);"
       )) {
         query.setString(1, javaUsername);
         query.setBytes(2, uuidToBytes(javaId));
         query.setString(3, linkCode);
         query.setString(4, bedrockUsername);
         query.setLong(5, Instant.now().getEpochSecond());
+        if (bedrockId != null) {
+          query.setBytes(6, uuidToBytes(bedrockId));
+        } else {
+          query.setNull(6, Types.BINARY);
+        }
         query.executeUpdate();
       }
     } catch (SQLException exception) {
@@ -295,12 +329,14 @@ public class MysqlDatabase extends CommonPlayerLink {
 
         try (ResultSet result = query.executeQuery()) {
           if (result.next()) {
-            UUID javaId = bytesToUUID(result.getBytes(2));
-            String linkCode = result.getString(3);
-            String bedrockUsername = result.getString(4);
-            long requestTime = result.getLong(5);
+            UUID javaId = bytesToUUID(result.getBytes("javaUniqueId"));
+            String linkCode = result.getString("linkCode");
+            String bedrockUsername = result.getString("bedrockUsername");
+            long requestTime = result.getLong("requestTime");
+            byte[] bedrockIdBytes = result.getBytes("bedrockId");
+            UUID bedrockId = bedrockIdBytes != null ? bytesToUUID(bedrockIdBytes) : null;
             return new LinkRequestImpl(javaUsername, javaId, linkCode, bedrockUsername,
-                requestTime);
+                bedrockId, requestTime);
           }
         }
       }

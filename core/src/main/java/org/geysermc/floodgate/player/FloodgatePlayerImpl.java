@@ -79,14 +79,7 @@ public final class FloodgatePlayerImpl implements FloodgatePlayer {
     static FloodgatePlayerImpl from(BedrockData data, HandshakeData handshakeData, EducationUuidScheme educationUuidScheme) {
         FloodgateApi api = FloodgateApi.getInstance();
 
-        UUID javaUniqueId;
-        if (data.isEducation()) {
-            javaUniqueId = educationUuidScheme.legacy()
-                    ? Utils.getLegacyEducationUuid(data.getTenantId(), data.getUsername())
-                    : Utils.getEducationUuid(data.getXuid());
-        } else {
-            javaUniqueId = Utils.getJavaUuid(data.getXuid());
-        }
+        UUID javaUniqueId = Utils.getIdentityUuid(data, educationUuidScheme);
 
         DeviceOs deviceOs = DeviceOs.fromId(data.getDeviceOs());
         UiProfile uiProfile = UiProfile.fromId(data.getUiProfile());

@@ -28,7 +28,7 @@ package org.geysermc.floodgate.link;
 import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.name.Names;
-import java.util.Random;
+import java.security.SecureRandom;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -74,8 +74,13 @@ public abstract class CommonPlayerLink implements PlayerLink {
         verifyLinkTimeout = linkConfig.getLinkCodeTimeout();
     }
 
+    private static final SecureRandom CODE_RANDOM = new SecureRandom();
+
     public String createCode() {
-        return String.format("%04d", new Random().nextInt(10000));
+        // together with the attempt limit in LinkAccountCommand this makes the code an actual
+        // secret, it can be the only thing gating redemption when the target was offline at
+        // request creation
+        return String.format("%06d", CODE_RANDOM.nextInt(1_000_000));
     }
 
     public boolean isRequestedPlayer(LinkRequest request, UUID bedrockId) {

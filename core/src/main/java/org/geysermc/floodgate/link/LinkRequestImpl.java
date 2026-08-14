@@ -36,23 +36,34 @@ public final class LinkRequestImpl implements LinkRequest {
     private final UUID javaUniqueId;
     private final String linkCode;
     private final String bedrockUsername;
+    private final UUID bedrockUniqueId;
     private final long requestTime;
 
     public LinkRequestImpl(String javaUsername, UUID javaUniqueId,
                            String linkCode, String bedrockUsername) {
-        this.javaUniqueId = javaUniqueId;
-        this.javaUsername = javaUsername;
-        this.linkCode = linkCode;
-        this.bedrockUsername = bedrockUsername;
-        requestTime = Instant.now().getEpochSecond();
+        this(javaUsername, javaUniqueId, linkCode, bedrockUsername, null,
+                Instant.now().getEpochSecond());
     }
 
     public LinkRequestImpl(String javaUsername, UUID javaUniqueId,
                            String linkCode, String bedrockUsername, long requestTime) {
-        this.javaUniqueId = javaUniqueId;
+        this(javaUsername, javaUniqueId, linkCode, bedrockUsername, null, requestTime);
+    }
+
+    public LinkRequestImpl(String javaUsername, UUID javaUniqueId,
+                           String linkCode, String bedrockUsername, UUID bedrockUniqueId) {
+        this(javaUsername, javaUniqueId, linkCode, bedrockUsername, bedrockUniqueId,
+                Instant.now().getEpochSecond());
+    }
+
+    public LinkRequestImpl(String javaUsername, UUID javaUniqueId,
+                           String linkCode, String bedrockUsername, UUID bedrockUniqueId,
+                           long requestTime) {
         this.javaUsername = javaUsername;
+        this.javaUniqueId = javaUniqueId;
         this.linkCode = linkCode;
         this.bedrockUsername = bedrockUsername;
+        this.bedrockUniqueId = bedrockUniqueId;
         this.requestTime = requestTime;
     }
 

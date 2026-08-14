@@ -81,12 +81,17 @@ public class GlobalPlayerLinking extends CommonPlayerLink {
     @Override
     @NonNull
     public CompletableFuture<LinkedPlayer> getLinkedPlayer(@NonNull UUID bedrockId) {
+        // the global api is keyed by xuid (the UUID's low 64 bits as a long). An education
+        // UUID's low bits are Entra derived, not an xuid, so a global lookup would at best 404
+        // and at worst collide with a real xuid and return someone else's link
         if (databaseImpl == null) {
-            return getLinkedPlayer0(bedrockId);
+            return Utils.isEducationId(bedrockId)
+                    ? CompletableFuture.completedFuture(null)
+                    : getLinkedPlayer0(bedrockId);
         }
 
         return databaseImpl.getLinkedPlayer(bedrockId).thenComposeAsync(result -> {
-            if (result != null) {
+            if (result != null || Utils.isEducationId(bedrockId)) {
                 return CompletableFuture.completedFuture(result);
             }
             return getLinkedPlayer0(bedrockId);
@@ -131,13 +136,19 @@ public class GlobalPlayerLinking extends CommonPlayerLink {
     @Override
     @NonNull
     public CompletableFuture<Boolean> isLinkedPlayer(@NonNull UUID bedrockId) {
+        // see getLinkedPlayer for why education UUIDs never reach the global api
         if (databaseImpl == null) {
-            return isLinkedPlayer0(bedrockId);
+            return Utils.isEducationId(bedrockId)
+                    ? CompletableFuture.completedFuture(false)
+                    : isLinkedPlayer0(bedrockId);
         }
 
         return databaseImpl.isLinkedPlayer(bedrockId).thenComposeAsync(result -> {
             if (result != null) {
                 return CompletableFuture.completedFuture(result);
+            }
+            if (Utils.isEducationId(bedrockId)) {
+                return CompletableFuture.completedFuture(false);
             }
             return isLinkedPlayer0(bedrockId);
         });
@@ -196,6 +207,19 @@ public class GlobalPlayerLinking extends CommonPlayerLink {
             @NonNull String bedrockUsername) {
         if (databaseImpl != null) {
             return databaseImpl.createLinkRequest(javaId, javaUsername, bedrockUsername);
+        }
+        return failedFuture();
+    }
+
+    @Override
+    @NonNull
+    public CompletableFuture<?> createLinkRequest(
+            @NonNull UUID javaId,
+            @NonNull String javaUsername,
+            @NonNull String bedrockUsername,
+            UUID bedrockId) {
+        if (databaseImpl != null) {
+            return databaseImpl.createLinkRequest(javaId, javaUsername, bedrockUsername, bedrockId);
         }
         return failedFuture();
     }

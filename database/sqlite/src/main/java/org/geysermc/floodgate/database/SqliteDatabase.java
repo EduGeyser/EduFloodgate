@@ -175,9 +175,19 @@ public class SqliteDatabase extends CommonPlayerLink {
             @NonNull UUID javaId,
             @NonNull String javaUsername,
             @NonNull String bedrockUsername) {
+        return createLinkRequest(javaId, javaUsername, bedrockUsername, null);
+    }
+
+    @Override
+    @NonNull
+    public CompletableFuture<String> createLinkRequest(
+            @NonNull UUID javaId,
+            @NonNull String javaUsername,
+            @NonNull String bedrockUsername,
+            UUID bedrockId) {
         return CompletableFuture.supplyAsync(() -> {
-            LinkRequest request =
-                    new LinkRequestImpl(javaUsername, javaId, createCode(), bedrockUsername);
+            LinkRequest request = new LinkRequestImpl(
+                    javaUsername, javaId, createCode(), bedrockUsername, bedrockId);
 
             activeLinkRequests.put(javaUsername, request);
 
