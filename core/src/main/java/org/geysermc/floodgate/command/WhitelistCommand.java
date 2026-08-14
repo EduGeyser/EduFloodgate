@@ -197,26 +197,26 @@ public class WhitelistCommand implements FloodgateCommand {
         // We need to get the UUID of the player if it's not manually specified
         httpClient.asyncGet(Constants.GET_XUID_URL + gamertag)
                 .whenComplete((result, error) -> {
-                    if (error != null) {
-                        sender.sendMessage(Message.API_UNAVAILABLE);
-                        error.printStackTrace();
-                        return;
-                    }
-
-                    JsonObject response = result.getResponse();
-
-                    if (!result.isCodeOk()) {
-                        sender.sendMessage(Message.UNEXPECTED_ERROR);
-                        logger.error(
-                                "Got an error from requesting the xuid of a Bedrock player: {}",
-                                response.get("message").getAsString()
-                        );
-                    }
-
-                    JsonElement xuidElement = response.get("xuid");
+                    JsonObject response = error == null ? result.getResponse() : null;
+                    JsonElement xuidElement = response != null ? response.get("xuid") : null;
 
                     if (xuidElement == null) {
-                        sender.sendMessage(Message.USER_NOT_FOUND);
+                        // one line only. With the pending entry in place, a failed xuid
+                        // lookup is the expected path for education players, not an error
+                        String reason = error != null
+                                ? "The Xbox lookup failed for '" + strippedName + "'."
+                                : "The Xbox lookup found no account named '"
+                                        + strippedName + "'.";
+                        if (add) {
+                            sender.sendMessage(reason
+                                    + " The pending entry will whitelist them when they join."
+                                    + " This is normal for education players.");
+                        } else {
+                            sender.sendMessage(reason);
+                        }
+                        if (error != null && config.isDebug()) {
+                            error.printStackTrace();
+                        }
                         return;
                     }
 
