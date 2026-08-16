@@ -102,9 +102,19 @@ public class MongoDbDatabase extends CommonPlayerLink {
             if (collectionNotExists("LinkedPlayerRequests")) {
                 database.createCollection("LinkedPlayerRequests");
 
-                linkedPlayerRequests.createIndex(new Document("bedrockId", 1),
-                        new IndexOptions().unique(true)); // primary key equivalent
+                // requests are stored and replaced per Java player, mirroring the MySQL
+                // primary key on javaUsername
+                linkedPlayerRequests.createIndex(new Document("javaUsername", 1),
+                        new IndexOptions().unique(true));
                 linkedPlayerRequests.createIndex(Indexes.ascending("requestTime"));
+            }
+            // older versions created a unique index on bedrockId, a field request documents
+            // never contained: every second request then failed with a duplicate null key.
+            // Drop it when present
+            try {
+                linkedPlayerRequests.dropIndex("bedrockId_1");
+            } catch (Exception ignored) {
+                // the index doesn't exist, which is the normal case
             }
 
             getLogger().info("Connected to MongoDB database.");
@@ -179,7 +189,10 @@ public class MongoDbDatabase extends CommonPlayerLink {
 
     private void linkPlayer0(UUID bedrockId, UUID javaId, String javaUsername) {
         try {
-            Bson filter = Filters.eq("javaUsername", javaUsername);
+            // one link per Bedrock account: filter on bedrockId, the collection's unique
+            // index, mirroring the MySQL primary key. Filtering on javaUsername would key
+            // links by a renamable name instead
+            Bson filter = Filters.eq("bedrockId", uuidToBytes(bedrockId));
             Document create = new Document("bedrockId", uuidToBytes(bedrockId))
                     .append("javaUniqueId", uuidToBytes(javaId))
                     .append("javaUsername", javaUsername);
@@ -201,7 +214,9 @@ public class MongoDbDatabase extends CommonPlayerLink {
             try {
                 String uuidBytes = uuidToBytes(javaId);
 
-                Bson filter = Filters.and(
+                // or, not and: the given uuid is either the Java side or the Bedrock side of
+                // a link, never both at once, so the old conjunction never matched anything
+                Bson filter = Filters.or(
                         Filters.eq("javaUniqueId", uuidBytes),
                         Filters.eq("bedrockId", uuidBytes)
                 );
@@ -220,10 +235,20 @@ public class MongoDbDatabase extends CommonPlayerLink {
             @NonNull UUID javaId,
             @NonNull String javaUsername,
             @NonNull String bedrockUsername) {
+        return createLinkRequest(javaId, javaUsername, bedrockUsername, null);
+    }
+
+    @Override
+    @NonNull
+    public CompletableFuture<String> createLinkRequest(
+            @NonNull UUID javaId,
+            @NonNull String javaUsername,
+            @NonNull String bedrockUsername,
+            UUID bedrockId) {
         return CompletableFuture.supplyAsync(() -> {
             String linkCode = createCode();
 
-            createLinkRequest0(javaUsername, javaId, linkCode, bedrockUsername);
+            createLinkRequest0(javaUsername, javaId, linkCode, bedrockUsername, bedrockId);
 
             return linkCode;
         }, getExecutorService());
@@ -233,13 +258,15 @@ public class MongoDbDatabase extends CommonPlayerLink {
             String javaUsername,
             UUID javaId,
             String linkCode,
-            String bedrockUsername) {
+            String bedrockUsername,
+            UUID bedrockId) {
         try {
             Bson filter = Filters.eq("javaUsername", javaUsername);
             Document create = new Document("javaUsername", javaUsername)
                     .append("javaUniqueId", uuidToBytes(javaId))
                     .append("linkCode", linkCode)
                     .append("bedrockUsername", bedrockUsername)
+                    .append("bedrockId", bedrockId != null ? uuidToBytes(bedrockId) : null)
                     .append("requestTime", Instant.now().getEpochSecond());
             Document update = new Document("$set", create);
 
@@ -300,9 +327,12 @@ public class MongoDbDatabase extends CommonPlayerLink {
                     UUID javaId = bytesToUUID(document.getString("javaUniqueId"));
                     String linkCode = document.getString("linkCode");
                     String bedrockUsername = document.getString("bedrockUsername");
+                    String bedrockIdString = document.getString("bedrockId");
+                    UUID bedrockId =
+                            bedrockIdString != null ? bytesToUUID(bedrockIdString) : null;
                     long requestTime = document.getLong("requestTime");
                     return new LinkRequestImpl(javaUsername, javaId, linkCode, bedrockUsername,
-                            requestTime);
+                            bedrockId, requestTime);
                 }
             }
         } catch (Exception exception) {

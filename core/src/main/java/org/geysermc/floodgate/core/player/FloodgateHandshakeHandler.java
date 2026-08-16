@@ -57,6 +57,7 @@ import org.geysermc.floodgate.util.InvalidFormatException;
 import org.geysermc.floodgate.core.util.Constants;
 import org.geysermc.floodgate.core.util.LanguageManager;
 import org.geysermc.floodgate.util.LinkedPlayer;
+import org.geysermc.floodgate.core.util.PendingWhitelistManager;
 import org.geysermc.floodgate.core.util.Utils;
 
 public final class FloodgateHandshakeHandler {
@@ -69,6 +70,7 @@ public final class FloodgateHandshakeHandler {
     private final FloodgateLogger logger;
     private final LanguageManager languageManager;
     private final EducationUuidScheme educationUuidScheme;
+    private final PendingWhitelistManager pendingWhitelist;
 
     public FloodgateHandshakeHandler(
             HandshakeHandlersImpl handshakeHandlers,
@@ -79,7 +81,8 @@ public final class FloodgateHandshakeHandler {
             AttributeKey<FloodgatePlayer> playerAttribute,
             FloodgateLogger logger,
             LanguageManager languageManager,
-            EducationUuidScheme educationUuidScheme) {
+            EducationUuidScheme educationUuidScheme,
+            PendingWhitelistManager pendingWhitelist) {
 
         this.handshakeHandlers = handshakeHandlers;
         this.api = api;
@@ -90,6 +93,7 @@ public final class FloodgateHandshakeHandler {
         this.logger = logger;
         this.languageManager = languageManager;
         this.educationUuidScheme = educationUuidScheme;
+        this.pendingWhitelist = pendingWhitelist;
     }
 
     /**
@@ -245,6 +249,16 @@ public final class FloodgateHandshakeHandler {
             InetSocketAddress socketAddress = new InetSocketAddress(handshakeData.getIp(), port);
             player.addProperty(PropertyKey.SOCKET_ADDRESS, socketAddress);
 
+            if (!handshakeData.shouldDisconnect()) {
+                // isolated so a pending whitelist bug can never break logins
+                try {
+                    pendingWhitelist.fulfill(player, bedrockData);
+                } catch (Exception exception) {
+                    logger.error("Error while processing the pending whitelist for {}",
+                            exception, player.getCorrectUsername());
+                }
+            }
+
             return new HandshakeResult(ResultType.SUCCESS, handshakeData, bedrockData, player);
         } catch (Exception exception) {
             exception.printStackTrace();
@@ -266,11 +280,10 @@ public final class FloodgateHandshakeHandler {
     }
 
     private CompletableFuture<Pair<BedrockData, LinkedPlayer>> fetchLinkedPlayer(BedrockData data) {
-        // Education players have no Xbox account, skip linking
-        if (!api.getPlayerLink().isEnabled() || data.isEducation()) {
+        if (!api.getPlayerLink().isEnabled()) {
             return CompletableFuture.completedFuture(new ObjectObjectImmutablePair<>(data, null));
         }
-        return api.getPlayerLink().getLinkedPlayer(Utils.getJavaUuid(data.getXuid()))
+        return api.getPlayerLink().getLinkedPlayer(Utils.getIdentityUuid(data, educationUuidScheme))
                 .thenApply(link -> new ObjectObjectImmutablePair<>(data, link))
                 .handle((result, error) -> {
                     if (error != null) {

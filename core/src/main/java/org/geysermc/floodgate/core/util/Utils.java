@@ -47,7 +47,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.geysermc.floodgate.api.FloodgateApi;
 import org.geysermc.floodgate.api.player.FloodgatePlayer;
+import org.geysermc.floodgate.api.util.EducationUuidScheme;
 import org.geysermc.floodgate.core.util.Constants;
+import org.geysermc.floodgate.util.BedrockData;
 
 public class Utils {
     private static final Pattern NON_UNIQUE_PREFIX = Pattern.compile("^\\w{0,16}$");
@@ -144,6 +146,21 @@ public class Utils {
 
     public static boolean isEducationId(UUID uuid) {
         return uuid.getMostSignificantBits() == EDUCATION_UUID_MSB;
+    }
+
+    /**
+     * The single place that maps verified handshake data to the player's Floodgate identity
+     * UUID: the xuid derived UUID for Bedrock players, the scheme selected Entra derived UUID
+     * for education players (whose xuid field carries the Entra OID, which is why
+     * {@link #getJavaUuid(String)} must never see education data).
+     */
+    public static UUID getIdentityUuid(BedrockData data, EducationUuidScheme scheme) {
+        if (data.isEducation()) {
+            return scheme.legacy()
+                    ? getLegacyEducationUuid(data.getTenantId(), data.getUsername())
+                    : getEducationUuid(data.getXuid());
+        }
+        return getJavaUuid(data.getXuid());
     }
 
     /**

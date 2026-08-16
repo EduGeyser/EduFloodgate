@@ -50,6 +50,15 @@ public interface LinkRequest {
     String getBedrockUsername();
 
     /**
+     * Returns the Floodgate UUID of the Bedrock player this request is bound to, captured when
+     * the target was online at request creation, or null when the target was offline and the
+     * request can only be redeemed with the link code.
+     */
+    default UUID getBedrockUniqueId() {
+        return null;
+    }
+
+    /**
      * Returns the unix time when the player link was requested.
      */
     long getRequestTime();
@@ -63,16 +72,18 @@ public interface LinkRequest {
     boolean isExpired(long linkTimeout);
 
     /**
-     * Checks if the given FloodgatePlayer is the player requested in this LinkRequest. This method
-     * will check both the real bedrock username {@link FloodgatePlayer#getUsername()} and the
-     * edited username {@link FloodgatePlayer#getJavaUsername()} and returns true if one of the two
-     * matches.
+     * Checks if the given FloodgatePlayer is the player requested in this LinkRequest. When the
+     * request is bound to a Bedrock UUID (the target was online at creation) only that exact
+     * account matches. Otherwise the link code is the only secret and any redeemer presenting
+     * it is accepted: usernames are deliberately not compared, since gamertags can be renamed
+     * onto by someone else and education usernames are not unique at all, so a name equality
+     * check adds spoofable identity rather than security.
      *
      * @param player the player to check
      * @return true if the given player is the player requested
      */
     default boolean isRequestedPlayer(FloodgatePlayer player) {
-        return getBedrockUsername().equals(player.getUsername()) ||
-                getBedrockUsername().equals(player.getJavaUsername());
+        UUID target = getBedrockUniqueId();
+        return target == null || target.equals(player.getJavaUniqueId());
     }
 }

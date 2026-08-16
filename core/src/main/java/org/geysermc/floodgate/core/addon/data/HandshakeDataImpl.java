@@ -78,17 +78,12 @@ public class HandshakeDataImpl implements HandshakeData {
                 int nameLength = Math.min(bedrockData.getUsername().length(), maxNameLength);
                 String baseName = prefix + bedrockData.getUsername().substring(0, nameLength);
                 javaUsername = Utils.findAvailableEduUsername(baseName);
-
-                javaUniqueId = educationUuidScheme.legacy()
-                        ? Utils.getLegacyEducationUuid(bedrockData.getTenantId(), bedrockData.getUsername())
-                        : Utils.getEducationUuid(bedrockData.getXuid());
             } else {
                 String prefix = config.getUsernamePrefix();
                 int usernameLength = Math.min(bedrockData.getUsername().length(), 16 - prefix.length());
                 javaUsername = prefix + bedrockData.getUsername().substring(0, usernameLength);
-
-                javaUniqueId = Utils.getJavaUuid(bedrockData.getXuid());
             }
+            javaUniqueId = Utils.getIdentityUuid(bedrockData, educationUuidScheme);
             if (config.isReplaceSpaces()) {
                 javaUsername = javaUsername.replace(" ", "_");
             }

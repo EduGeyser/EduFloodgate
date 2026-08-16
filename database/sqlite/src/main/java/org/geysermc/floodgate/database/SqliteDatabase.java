@@ -37,8 +37,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import javax.inject.Inject;
-import javax.inject.Named;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.geysermc.floodgate.api.link.LinkRequest;
 import org.geysermc.floodgate.api.link.LinkRequestResult;
@@ -50,14 +48,9 @@ public class SqliteDatabase extends CommonPlayerLink {
     private final Map<String, LinkRequest> activeLinkRequests = new HashMap<>();
     private Connection connection;
 
-    /* These are DELIBERATELY javax imports so Guice relocations can't break it */
-    @Inject
-    @Named("dataDirectory")
-    private Path dataDirectory;
-
     @Override
     public void load() {
-        Path databasePath = dataDirectory.resolve("linked-players.db");
+        Path databasePath = getDataDirectory().resolve("linked-players.db");
         try {
             Class.forName("org.sqlite.JDBC");
             connection = DriverManager.getConnection("jdbc:sqlite:" + databasePath);
@@ -175,9 +168,19 @@ public class SqliteDatabase extends CommonPlayerLink {
             @NonNull UUID javaId,
             @NonNull String javaUsername,
             @NonNull String bedrockUsername) {
+        return createLinkRequest(javaId, javaUsername, bedrockUsername, null);
+    }
+
+    @Override
+    @NonNull
+    public CompletableFuture<String> createLinkRequest(
+            @NonNull UUID javaId,
+            @NonNull String javaUsername,
+            @NonNull String bedrockUsername,
+            UUID bedrockId) {
         return CompletableFuture.supplyAsync(() -> {
-            LinkRequest request =
-                    new LinkRequestImpl(javaUsername, javaId, createCode(), bedrockUsername);
+            LinkRequest request = new LinkRequestImpl(
+                    javaUsername, javaId, createCode(), bedrockUsername, bedrockId);
 
             activeLinkRequests.put(javaUsername, request);
 

@@ -29,6 +29,10 @@ import static org.geysermc.floodgate.core.command.CommonCommandMessage.CHECK_CON
 import static org.incendo.cloud.parser.standard.StringParser.stringParser;
 
 import com.google.inject.Inject;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.geysermc.floodgate.api.FloodgateApi;
@@ -45,6 +49,7 @@ import org.geysermc.floodgate.core.player.UserAudience.PlayerAudience;
 import org.geysermc.floodgate.core.player.audience.PlayerAudienceArgument;
 import org.geysermc.floodgate.core.player.audience.ProfileAudience;
 import org.geysermc.floodgate.core.util.Constants;
+import org.geysermc.floodgate.core.util.Utils;
 import org.incendo.cloud.Command;
 import org.incendo.cloud.CommandManager;
 import org.incendo.cloud.context.CommandContext;
@@ -52,8 +57,15 @@ import org.incendo.cloud.description.Description;
 
 @NoArgsConstructor
 public final class LinkAccountCommand implements FloodgateCommand {
+    private static final int MAX_FAILED_VERIFY_ATTEMPTS = 5;
+    private static final long VERIFY_ATTEMPT_WINDOW_MILLIS = TimeUnit.MINUTES.toMillis(10);
+
     @Inject private FloodgateApi api;
     @Inject private FloodgateLogger logger;
+
+    // failed redemption attempts per Bedrock sender. The link code is a guessable size, so
+    // without a limit the 1 in a million odds can be brute forced by command spam
+    private final Map<UUID, FailedAttempts> verifyFailures = new ConcurrentHashMap<>();
 
     @Override
     public Command<PlayerAudience> buildCommand(CommandManager<UserAudience> commandManager) {
@@ -78,6 +90,13 @@ public final class LinkAccountCommand implements FloodgateCommand {
                 sender.sendMessage(CommonCommandMessage.LOCAL_LINKING_NOTICE,
                         Constants.LINK_INFO_URL);
             } else {
+                if (Utils.isEducationId(sender.uuid())) {
+                    // the global linking api is keyed by xuid and education accounts have
+                    // none, so pointing them at the global linking website would dead end
+                    sender.sendMessage("Education accounts can't use global linking."
+                            + " This server would need its own linking database.");
+                    return;
+                }
                 sender.sendMessage(CommonCommandMessage.GLOBAL_LINKING_NOTICE,
                         Constants.LINK_INFO_URL);
                 return;
@@ -102,6 +121,11 @@ public final class LinkAccountCommand implements FloodgateCommand {
 
             String code = context.get("code");
 
+            if (isVerifyThrottled(sender.uuid())) {
+                sender.sendMessage("Too many failed link attempts, try again later.");
+                return;
+            }
+
             link.verifyLinkRequest(sender.uuid(), targetName, sender.username(), code)
                     .whenComplete((result, throwable) -> {
                         if (throwable != null || result == LinkRequestResult.UNKNOWN_ERROR) {
@@ -114,15 +138,19 @@ public final class LinkAccountCommand implements FloodgateCommand {
                                 sender.sendMessage(Message.ALREADY_LINKED);
                                 break;
                             case NO_LINK_REQUESTED:
+                                recordVerifyFailure(sender.uuid());
                                 sender.sendMessage(Message.NO_LINK_REQUESTED);
                                 break;
                             case INVALID_CODE:
+                                recordVerifyFailure(sender.uuid());
                                 sender.sendMessage(Message.INVALID_CODE);
                                 break;
                             case REQUEST_EXPIRED:
+                                recordVerifyFailure(sender.uuid());
                                 sender.sendMessage(Message.LINK_REQUEST_EXPIRED);
                                 break;
                             case LINK_COMPLETED:
+                                verifyFailures.remove(sender.uuid());
                                 sender.disconnect(Message.LINK_REQUEST_COMPLETED, targetName);
                                 break;
                             default:
@@ -138,7 +166,15 @@ public final class LinkAccountCommand implements FloodgateCommand {
             return;
         }
 
-        link.createLinkRequest(sender.uuid(), sender.username(), targetName)
+        // when the target is online we can bind the request to their exact account, so that
+        // no other same named account can ever redeem it. When they're offline the code is
+        // the secret, handed to the intended player out of band
+        UUID targetBedrockId = targetUser.uuid();
+        if (targetBedrockId != null && !api.isFloodgateId(targetBedrockId)) {
+            targetBedrockId = null;
+        }
+
+        link.createLinkRequest(sender.uuid(), sender.username(), targetName, targetBedrockId)
                 .whenComplete((result, throwable) -> {
                     if (throwable != null || result == LinkRequestResult.UNKNOWN_ERROR) {
                         sender.sendMessage(Message.LINK_REQUEST_ERROR);
@@ -154,6 +190,37 @@ public final class LinkAccountCommand implements FloodgateCommand {
                     sender.sendMessage(Message.LINK_REQUEST_CREATED,
                             targetName, sender.username(), result);
                 });
+    }
+
+    private boolean isVerifyThrottled(UUID senderId) {
+        FailedAttempts failures = verifyFailures.get(senderId);
+        if (failures == null) {
+            return false;
+        }
+        synchronized (failures) {
+            if (System.currentTimeMillis() - failures.windowStart > VERIFY_ATTEMPT_WINDOW_MILLIS) {
+                return false;
+            }
+            return failures.count >= MAX_FAILED_VERIFY_ATTEMPTS;
+        }
+    }
+
+    private void recordVerifyFailure(UUID senderId) {
+        FailedAttempts failures = verifyFailures.computeIfAbsent(
+                senderId, id -> new FailedAttempts());
+        synchronized (failures) {
+            long now = System.currentTimeMillis();
+            if (now - failures.windowStart > VERIFY_ATTEMPT_WINDOW_MILLIS) {
+                failures.windowStart = now;
+                failures.count = 0;
+            }
+            failures.count++;
+        }
+    }
+
+    private static final class FailedAttempts {
+        long windowStart = System.currentTimeMillis();
+        int count;
     }
 
     @Override

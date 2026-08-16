@@ -102,6 +102,28 @@ public interface PlayerLink {
     );
 
     /**
+     * Creates a link request for the given Java player, bound to the Bedrock player's Floodgate
+     * UUID when the target was online at creation time. A bound request can only be redeemed by
+     * that exact account; an unbound request (null uuid) is redeemable with the link code alone.
+     *
+     * @param javaId          the uuid of the Java player
+     * @param javaUsername    the username of the Java player
+     * @param bedrockUsername the username of the Bedrock player receiving the link request
+     * @param bedrockId       the Floodgate uuid of the target, or null when the target is offline
+     * @return a future holding the result of the link request which will be a {@link
+     * LinkRequestResult} on failure and the link code (string) on success
+     */
+    @NonNull
+    default CompletableFuture<?> createLinkRequest(
+            @NonNull UUID javaId,
+            @NonNull String javaUsername,
+            @NonNull String bedrockUsername,
+            UUID bedrockId
+    ) {
+        return createLinkRequest(javaId, javaUsername, bedrockUsername);
+    }
+
+    /**
      * Verifies a link request for the given Bedrock player.
      *
      * @param bedrockId       the uuid of the Bedrock player

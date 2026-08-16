@@ -11,7 +11,11 @@ tasks {
         from(project.rootProject.file("LICENSE"))
     }
     val shadowJar = named<ShadowJar>("shadowJar") {
-        archiveBaseName.set("edufloodgate-${project.name}")
+        // only the shipped platform jars carry the edufloodgate name. Everything else keeps
+        // the upstream name: the database jar loader validates upstream's file name format
+        val platformJars = setOf("bungee", "spigot", "velocity")
+        val jarPrefix = if (project.name in platformJars) "edufloodgate" else "floodgate"
+        archiveBaseName.set("$jarPrefix-${project.name}")
         archiveVersion.set("")
         archiveClassifier.set("")
 

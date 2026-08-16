@@ -42,14 +42,15 @@ import org.incendo.cloud.suggestion.Suggestion;
 public class PlayerAudienceArgument {
 
     public static CommandComponent.Builder<UserAudience, ProfileAudience> ofAnyIdentifierBedrock(String name) {
-        return of(name, true, true, PlayerType.ONLY_BEDROCK);
+        // education usernames can exceed the 16 char Java limit, so allow longer names here
+        return of(name, true, true, PlayerType.ONLY_BEDROCK, 64);
     }
 
     public static CommandComponent.Builder<UserAudience, ProfileAudience> ofAnyUsernameBoth(String name) {
-        return of(name, false, true, PlayerType.ALL_PLAYERS);
+        return of(name, false, true, PlayerType.ALL_PLAYERS, 16);
     }
 
-    private static CommandComponent.Builder<UserAudience, ProfileAudience> of(String name, boolean allowUuid, boolean allowOffline, PlayerType limitTo) {
+    private static CommandComponent.Builder<UserAudience, ProfileAudience> of(String name, boolean allowUuid, boolean allowOffline, PlayerType limitTo, int maxNameLength) {
         return CommandComponent.<UserAudience, ProfileAudience>builder()
                 .name(name)
                 .parser(quotedStringParser().flatMapSuccess(ProfileAudience.class,
@@ -57,33 +58,27 @@ public class PlayerAudienceArgument {
                             CommandUtil commandUtil = context.get("CommandUtil");
 
                             ProfileAudience profileAudience;
-                            if (input.length() > 16) {
-                                // This must be a UUID.
-                                if (!allowUuid) {
-                                    return ArgumentParseResult.failureFuture(
-                                            new InvalidPlayerIdentifierException(
-                                                    "UUID is not allowed here"));
+                            UUID uuid = null;
+                            if (allowUuid && (input.length() == 32 || input.length() == 36)) {
+                                try {
+                                    uuid = UUID.fromString(input);
+                                } catch (final IllegalArgumentException ignored) {
+                                    // not a UUID after all, fall through to the username path
                                 }
+                            }
 
-                                if (input.length() != 32 && input.length() != 36) {
-                                    // Neither UUID without dashes nor with dashes.
+                            if (uuid != null) {
+                                // We only want to make sure the UUID is valid here.
+                                Object player = commandUtil.getPlayerByUuid(uuid, limitTo);
+                                profileAudience = commandUtil.getProfileAudience(player,
+                                        allowOffline);
+                            } else {
+                                if (input.length() > maxNameLength) {
                                     return ArgumentParseResult.failureFuture(
                                             new InvalidPlayerIdentifierException(
                                                     "Expected player name/UUID"));
                                 }
 
-                                try {
-                                    // We only want to make sure the UUID is valid here.
-                                    Object player = commandUtil.getPlayerByUuid(
-                                            UUID.fromString(input), limitTo);
-                                    profileAudience = commandUtil.getProfileAudience(player,
-                                            allowOffline);
-                                } catch (final IllegalArgumentException ignored) {
-                                    return ArgumentParseResult.failureFuture(
-                                            new InvalidPlayerIdentifierException(
-                                                    "Invalid UUID '" + input + "'"));
-                                }
-                            } else {
                                 // This is a username.
                                 Object player = commandUtil.getPlayerByUsername(input, limitTo);
                                 profileAudience = commandUtil.getProfileAudience(player,
