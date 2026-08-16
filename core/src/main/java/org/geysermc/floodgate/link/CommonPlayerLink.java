@@ -27,7 +27,9 @@ package org.geysermc.floodgate.link;
 
 import com.google.inject.Inject;
 import com.google.inject.Key;
+import com.google.inject.name.Named;
 import com.google.inject.name.Names;
+import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -58,6 +60,15 @@ public abstract class CommonPlayerLink implements PlayerLink {
     @Inject
     @Getter(AccessLevel.PROTECTED)
     private FloodgateLogger logger;
+
+    // injected here in core with guice's own annotations, which every platform honors:
+    // core is relocated together with the shaded guice on Spigot, and the jakarta only
+    // guice that Velocity 4 provides ignores the javax.inject annotations that database
+    // jars used for this, which left the field null there
+    @Inject
+    @Named("dataDirectory")
+    @Getter(AccessLevel.PROTECTED)
+    private Path dataDirectory;
 
     @Inject
     @Getter(AccessLevel.PROTECTED)
