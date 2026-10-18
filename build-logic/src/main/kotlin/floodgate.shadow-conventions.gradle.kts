@@ -2,7 +2,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     id("floodgate.base-conventions")
-    id("com.github.johnrengelman.shadow")
+    id("com.gradleup.shadow")
 }
 
 tasks {
@@ -21,12 +21,22 @@ tasks {
 
         val sJar: ShadowJar = this
 
-        doFirst {
-            providedDependencies[project.name]?.forEach { (name, notation) ->
-                sJar.dependencies {
-                    println("Excluding $name from ${project.name}")
-                    exclude(dependency(notation))
+        // Shadow resolves the bundled dependencies as a task input, before doFirst runs, so
+        // the provided dependencies are excluded through a spec that reads them lazily.
+        // An empty part of a provided group:name:version matches anything
+        val projectName = project.name
+        dependencies {
+            exclude { resolved ->
+                val coordinates = listOf(resolved.moduleGroup, resolved.moduleName, resolved.moduleVersion)
+                providedDependencies[projectName].orEmpty().any { (name, _) ->
+                    name.split(":").withIndex().all { (i, part) -> part.isEmpty() || part == coordinates[i] }
                 }
+            }
+        }
+
+        doFirst {
+            providedDependencies[project.name]?.forEach { (name, _) ->
+                println("Excluding $name from ${project.name}")
             }
 
             // relocations made in included project dependencies are for whatever reason not
@@ -59,5 +69,5 @@ fun addRelocations(project: Project, shadowJar: ShadowJar) {
 fun callAddRelocations(configuration: Configuration, shadowJar: ShadowJar) =
     configuration.dependencies.forEach {
         if (it is ProjectDependency)
-            addRelocations(it.dependencyProject, shadowJar)
+            addRelocations(project.project(it.path), shadowJar)
     }

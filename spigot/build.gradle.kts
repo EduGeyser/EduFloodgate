@@ -1,14 +1,8 @@
+// Compile against the pre-record GameProfile API; SpigotVersionSpecificMethods reaches the
+// record API of newer authlib versions through reflection
 var authlibVersion = "1.5.21"
-var guavaVersion = "21.0"
-var gsonVersion = "2.8.5"
-
-indra {
-    javaVersions {
-        // For Folia
-        target(8)
-        minimumToolchain(17)
-    }
-}
+var guavaVersion = "33.7.2-jre"
+var gsonVersion = "2.14.0"
 
 dependencies {
     api(projects.core)
@@ -17,11 +11,7 @@ dependencies {
     // hack to make pre 1.12 work
     implementation("com.google.guava", "guava", guavaVersion)
 
-    compileOnlyApi("dev.folia", "folia-api", Versions.spigotVersion) {
-        attributes {
-            attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 17)
-        }
-    }
+    compileOnlyApi("dev.folia", "folia-api", Versions.spigotVersion)
 }
 
 relocate("com.google.inject")

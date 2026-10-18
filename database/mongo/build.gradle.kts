@@ -1,4 +1,4 @@
-val mongoClientVersion = "4.4.1"
+val mongoClientVersion = "5.13.0"
 
 dependencies {
     provided(projects.core)

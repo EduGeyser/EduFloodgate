@@ -1,7 +1,7 @@
 plugins {
     `java-library`
     id("floodgate.build-logic")
-    id("io.freefair.lombok") version "6.3.0" apply false
+    id("io.freefair.lombok") version "9.8.2" apply false
 }
 
 allprojects {
@@ -17,7 +17,7 @@ val deployProjects = setOf(
     projects.bungee,
     projects.spigot,
     projects.velocity
-).map { it.dependencyProject }
+).map { project(it.path) }
 
 //todo re-add checkstyle when we switch back to 2 space indention
 // and take a look again at spotbugs someday

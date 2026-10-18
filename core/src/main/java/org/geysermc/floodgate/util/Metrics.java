@@ -75,7 +75,8 @@ public final class Metrics {
                 logger::info,
                 Constants.DEBUG_MODE,
                 Constants.DEBUG_MODE,
-                Constants.DEBUG_MODE
+                Constants.DEBUG_MODE,
+                false
         );
 
         metricsBase.addCustomChart(

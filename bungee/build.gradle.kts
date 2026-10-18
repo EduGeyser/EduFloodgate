@@ -1,7 +1,7 @@
-var bungeeProxyVersion = "1.21-R0.1-SNAPSHOT"
-var bungeeApiVersion = "1.21-R0.1"
-var gsonVersion = "2.8.0"
-var guavaVersion = "21.0"
+var bungeeProxyVersion = "1.21-R0.4-SNAPSHOT"
+var bungeeApiVersion = "26.1-R0.1-SNAPSHOT"
+var gsonVersion = "2.14.0"
+var guavaVersion = "33.7.2-jre"
 
 dependencies {
     api(projects.core)

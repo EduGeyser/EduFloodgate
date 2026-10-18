@@ -28,16 +28,16 @@ object Versions {
     const val cumulusVersion = "1.1.2"
     const val eventsVersion = "1.1-SNAPSHOT"
     const val configUtilsVersion = "1.0-SNAPSHOT"
-    const val spigotVersion = "1.19.4-R0.1-SNAPSHOT"
+    const val spigotVersion = "26.1.2.build.8-stable"
     const val fastutilVersion = "8.5.3"
-    const val guiceVersion = "6.0.0"
-    const val nettyVersion = "4.1.49.Final"
-    const val snakeyamlVersion = "1.28"
+    const val guiceVersion = "7.0.0"
+    const val nettyVersion = "4.2.19.Final"
+    const val snakeyamlVersion = "2.7"
     const val cloudVersion = "2.0.1" // for cloud-minecraft
-    const val cloudCore = "2.0.0"
-    const val bstatsVersion = "3.0.2"
+    const val cloudCore = "2.1.0"
+    const val bstatsVersion = "3.2.1"
 
     const val javaWebsocketVersion = "1.6.0"
 
-    const val checkerQual = "3.19.0"
+    const val checkerQual = "4.3.1"
 }

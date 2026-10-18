@@ -45,7 +45,7 @@ EduFloodgate compiles against EduGeyser's `common` module, which carries the Edu
 
 1. Clone [EduGeyser](https://github.com/EduGeyser/EduGeyser) next to this repository and run `./gradlew :common:publishToMavenLocal` there.
 2. Make sure `geyserVersion` in `build-logic/src/main/kotlin/Versions.kt` matches the version in EduGeyser's `gradle.properties`.
-3. Build with JDK 17: `./gradlew build` (on Windows `gradlew build`).
+3. Build with JDK 27: `./gradlew build` (on Windows `gradlew build`).
 4. The jars are in `<platform>/build/libs/edufloodgate-<platform>.jar` for `bungee`, `spigot`, and `velocity`.
 
 ## Contributing

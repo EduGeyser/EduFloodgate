@@ -1,14 +1,7 @@
-var velocityVersion = "3.2.0-SNAPSHOT"
-var log4jVersion = "2.11.2"
-var gsonVersion = "2.8.8"
-var guavaVersion = "25.1-jre"
-
-indra {
-    javaVersions {
-        // For Velocity API
-        target(11)
-    }
-}
+var velocityVersion = "4.3.0"
+var log4jVersion = "2.26.1"
+var gsonVersion = "2.14.0"
+var guavaVersion = "33.7.2-jre"
 
 dependencies {
     api(projects.core)

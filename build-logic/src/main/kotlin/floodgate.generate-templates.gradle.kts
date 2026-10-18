@@ -89,5 +89,5 @@ abstract class GenerateAnyTemplates : Sync() {
     }
 }
 
-open class GenerateResourceTemplates : GenerateAnyTemplates()
-open class GenerateSourceTemplates : GenerateAnyTemplates()
+abstract class GenerateResourceTemplates : GenerateAnyTemplates()
+abstract class GenerateSourceTemplates : GenerateAnyTemplates()
