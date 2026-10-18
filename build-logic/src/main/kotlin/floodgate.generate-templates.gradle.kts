@@ -73,7 +73,7 @@ inline fun <reified T : Any> ExtensionContainer.findByType(noinline action: T.()
     }
 }
 
-abstract class GenerateAnyTemplates : Copy() {
+abstract class GenerateAnyTemplates : Sync() {
     private val replacements = mutableMapOf<String, String>()
 
     fun replaceToken(key: String, value: () -> Any) {
