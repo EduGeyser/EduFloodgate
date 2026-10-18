@@ -1,40 +1,59 @@
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 # EduFloodgate
 
-A [Floodgate](https://github.com/GeyserMC/Floodgate) fork that adds **Minecraft Education Edition** player support for online mode Java servers. Companion plugin for [EduGeyser](https://github.com/SendableMetatype/EduGeyser).
+EduFloodgate is a fork of [Floodgate](https://github.com/GeyserMC/Floodgate) that lets Minecraft: Education Edition players join online-mode Java servers through [EduGeyser](https://github.com/EduGeyser/EduGeyser). It replaces standard Floodgate and keeps everything Floodgate does for Bedrock Edition players.
+
+Website and documentation: [edugeyser.org](https://edugeyser.org)
 
 ## Features
 
-- **Education player identity** - Stable UUID derived from the MESS-verified Entra Object ID, cryptographically tied to the student's M365 account
-- **Education usernames** - Prefixed with `+` by default (e.g. `+Mark`), with `_N` suffix for collision resolution when two players share the same display name (e.g. `+Mark_2`)
-- **FloodgatePlayer API** - `isEducationPlayer()`, `getTenantId()`, and `getAdRole()` for downstream plugins
-- **Xbox Live linking bypass** - Education clients are automatically excluded from player linking (no Xbox account to link)
-- **BedrockData protocol extension** - Education fields (isEdu, tenantId, adRole) passed through the Floodgate data pipeline
+- **Education player identity.** Every Education player gets a stable Java UUID. The format is set in `uuid/scheme.yml` in the EduFloodgate data folder, which is created with the default on first start. `modern`, the default, derives the UUID from the identity verified by Microsoft. `legacy` derives it from the tenant and username only; it is insecure and should only be used if you have a specific reason to. The setting must be the same in EduGeyser and in every EduFloodgate instance, or a player gets different UUIDs on different servers.
+- **Education usernames.** Education players get their own prefix, `+` by default, set with `education-prefix` in the config. Education display names often collide, since the default Entra format is the first name plus the last initial, so a second player with the same name online gets a numbered suffix: `+Mark`, then `+Mark_2`.
+- **Whitelisting.** `fwhitelist add <name>` works for Bedrock and Education players alike. The name can be given with or without the prefix, and an optional `bedrock` or `edu` argument after it limits the entry to that player type. A player who is not online yet is stored in a pending whitelist and whitelisted when they next join.
+- **API.** `FloodgatePlayer` gains `isEducationPlayer()`, `getTenantId()`, and `getAdRole()` for other plugins. The Education fields travel through the normal Floodgate handshake data.
+- **Global linking stays Bedrock-only.** Education players have no Xbox identity, so the global Xbox account linking never applies to them.
+
+## Platforms
+
+EduFloodgate builds for Spigot, BungeeCord, and Velocity. For Fabric and NeoForge servers use [EduFloodgate-Modded](https://github.com/EduGeyser/EduFloodgate-Modded).
+
+EduFloodgate requires EduGeyser. Use the EduFloodgate release that was published alongside your EduGeyser release.
 
 ## Downloads
 
-Pre-built jars are available on the [Releases](https://github.com/SendableMetatype/EduFloodgate/releases) page.
+Get the latest jars from the [download page](https://edugeyser.org/download) or from [GitHub Releases](https://github.com/EduGeyser/EduFloodgate/releases).
 
-Requires [EduGeyser](https://github.com/SendableMetatype/EduGeyser).
+## Setting Up
 
-## Documentation
+Install and configure EduFloodgate exactly like standard Floodgate, then apply the Education-specific settings:
 
-- **[Setup Guide](https://codeberg.org/SendableMetatype/EduGeyser-Docs/src/branch/master/SETUP-GUIDE.md)** - How to install and configure EduGeyser + EduFloodgate
+- [Floodgate Setup](https://edugeyser.org/wiki/floodgate/setup)
+- [EduFloodgate](https://edugeyser.org/wiki/geyser/education/edufloodgate): usernames and UUIDs for Education players
+- [Education Setup](https://edugeyser.org/wiki/geyser/education/setup) for the EduGeyser side
 
-For technical details, see the **[Master Documentation](https://codeberg.org/SendableMetatype/EduGeyser-Docs/src/branch/master/edugeyser-master-documentation.md)**.
+The rest of the [Floodgate wiki](https://edugeyser.org/wiki/floodgate/) covers what EduFloodgate shares with upstream.
 
----
+## Support
 
-# Floodgate
+- Discord: https://edugeyser.org/discord
+- Bug reports and feature requests: [GitHub Issues](https://github.com/EduGeyser/EduFloodgate/issues)
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Build Status](https://github.com/GeyserMC/Floodgate/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/GeyserMC/Floodgate/actions/workflows/build.yml?query=branch%3Amaster)
-[![Discord](https://img.shields.io/discord/613163671870242838.svg?color=%237289da&label=discord)](http://discord.geysermc.org/)
-[![Hits](https://hitcount.dev/p/GeyserMC/Floodgate.svg)](https://hitcount.dev/p/GeyserMC/Floodgate)
+## Compiling
 
-[Download](https://geysermc.org/download/?project=floodgate)
+EduFloodgate compiles against EduGeyser's `common` module, which carries the Education fields and is not published anywhere public. Publish it to your local Maven repository first:
 
-Hybrid mode plugin to allow for connections from [Geyser](https://github.com/GeyserMC/Geyser) to join online mode servers.
+1. Clone [EduGeyser](https://github.com/EduGeyser/EduGeyser) next to this repository and run `./gradlew :common:publishToMavenLocal` there.
+2. Make sure `geyserVersion` in `build-logic/src/main/kotlin/Versions.kt` matches the version in EduGeyser's `gradle.properties`.
+3. Build with JDK 17: `./gradlew build` (on Windows `gradlew build`).
+4. The jars are in `<platform>/build/libs/edufloodgate-<platform>.jar` for `bungee`, `spigot`, and `velocity`.
 
-Geyser is an open collaboration project by [CubeCraft Games](https://cubecraft.net).
+## Contributing
 
-See the [Floodgate](https://geysermc.org/wiki/floodgate/) section in the GeyserMC Wiki for more info about what Floodgate is, how you setup Floodgate and known issues/caveats. Additionally, it includes a more in-depth look into how Floodgate works and the Floodgate API.
+Contributions are welcome. Open an issue or a pull request on GitHub, or reach out on [Discord](https://edugeyser.org/discord).
+
+## Credits
+
+EduFloodgate is a fork of [Floodgate](https://github.com/GeyserMC/Floodgate), part of the [GeyserMC](https://geysermc.org) project.
+
+EduFloodgate is licensed under the [MIT License](LICENSE).

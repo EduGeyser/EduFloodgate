@@ -24,7 +24,7 @@
  */
 
 object Versions {
-    const val geyserVersion = "2.9.4-SNAPSHOT"
+    const val geyserVersion = "2.12.0-SNAPSHOT"
     const val cumulusVersion = "1.1.2"
     const val eventsVersion = "1.1-SNAPSHOT"
     const val configUtilsVersion = "1.0-SNAPSHOT"
@@ -33,7 +33,7 @@ object Versions {
     const val guiceVersion = "6.0.0"
     const val nettyVersion = "4.1.49.Final"
     const val snakeyamlVersion = "1.28"
-    const val cloudVersion = "2.0.0-beta.16" // for cloud-minecraft
+    const val cloudVersion = "2.0.1" // for cloud-minecraft
     const val cloudCore = "2.0.0"
     const val bstatsVersion = "3.0.2"
 
