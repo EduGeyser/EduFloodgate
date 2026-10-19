@@ -1,4 +1,4 @@
-val sqliteJdbcVersion = "3.36.0.3"
+val sqliteJdbcVersion = "3.53.4.0"
 
 dependencies {
     provided(projects.core)

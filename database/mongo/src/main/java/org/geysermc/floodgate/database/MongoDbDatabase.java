@@ -41,12 +41,12 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import org.bson.Document;
 import org.bson.conversions.Bson;
-import org.bson.internal.Base64;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.geysermc.floodgate.api.link.LinkRequest;
 import org.geysermc.floodgate.api.link.LinkRequestResult;
@@ -358,11 +358,11 @@ public class MongoDbDatabase extends CommonPlayerLink {
                 .order(ByteOrder.BIG_ENDIAN)
                 .putLong(uuid.getMostSignificantBits())
                 .putLong(uuid.getLeastSignificantBits());
-        return Base64.encode(uuidBytes);
+        return Base64.getEncoder().encodeToString(uuidBytes);
     }
 
     private UUID bytesToUUID(String uuidBytes) {
-        ByteBuffer buf = ByteBuffer.wrap(Base64.decode(uuidBytes));
+        ByteBuffer buf = ByteBuffer.wrap(Base64.getDecoder().decode(uuidBytes));
         return new UUID(buf.getLong(), buf.getLong());
     }
 
